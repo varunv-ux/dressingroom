@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dressing room</title>
+    <link rel="stylesheet" href="dressing-room.css" />
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <img class="brand-logo" src="icons/icon-32.png" alt="" />
+        <strong>Dressing room</strong>
+      </div>
+      <div class="right">
+        <button id="railToggle" class="rail-toggle" type="button" aria-label="Open side rail" aria-expanded="false"></button>
+      </div>
+    </header>
+
+    <nav id="filters"></nav>
+
+    <main>
+      <section id="grid" class="grid" aria-label="Looks"></section>
+      <aside class="side-rail" aria-label="Side rail">
+        <div class="rail-header">
+          <strong>Side rail</strong>
+          <span id="railCount">0</span>
+        </div>
+        <section id="railGrid" class="rail-grid"></section>
+      </aside>
+    </main>
+
+    <template id="lookTemplate">
+      <div class="look-item">
+        <article class="look-card">
+          <img />
+          <div class="look-meta">
+            <span class="domain"></span>
+            <div class="look-actions">
+              <button class="icon-button move-button" type="button"></button>
+              <button class="icon-button hide-button" type="button" aria-label="Hide look"></button>
+              <a class="icon-button open-button" target="_blank" rel="noreferrer"></a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </template>
+
+    <script src="vendor/muuri.min.js"></script>
+    <script src="dressing-room.js"></script>
+  </body>
+</html>

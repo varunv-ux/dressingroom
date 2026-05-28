@@ -1,0 +1,16 @@
+{
+  "name": "pose-tryon-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server/index.js",
+    "check": "node --check server/index.js && node --check extension/background.js && node --check extension/content.js && node --check extension/popup.js && node --check extension/dressing-room.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.1.0",
+    "muuri": "^0.9.5"
+  }
+}

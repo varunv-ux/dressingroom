@@ -1,0 +1,68 @@
+.pose-overlay-button {
+  align-items: center;
+  appearance: none;
+  background: #141515;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.16);
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: "Avenir Next", Avenir, "Aptos", "Segoe UI Variable", "Segoe UI", Inter, ui-sans-serif, system-ui,
+    -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 8px;
+  height: 38px;
+  justify-content: center;
+  letter-spacing: 0;
+  line-height: 1;
+  min-width: 92px;
+  padding: 0 16px;
+  position: fixed;
+  transition: opacity 140ms ease, transform 140ms ease, background 140ms ease;
+  white-space: nowrap;
+  z-index: 2147483647;
+}
+
+.pose-overlay-button:hover {
+  background: #000000;
+  transform: translateY(-1px);
+}
+
+.pose-overlay-button[data-state="ready"] {
+  background: #0f766e;
+}
+
+.pose-overlay-button[data-state="working"] {
+  background: #141515;
+  cursor: wait;
+}
+
+.pose-overlay-button[data-state="working"]::before {
+  animation: pose-spin 720ms linear infinite;
+  border: 2px solid rgba(255, 255, 255, 0.34);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  content: "";
+  height: 12px;
+  width: 12px;
+}
+
+.pose-overlay-button[data-state="error"] {
+  background: #b42318;
+}
+
+.pose-overlay-button[hidden] {
+  display: none;
+}
+
+.pose-replaced-image {
+  filter: saturate(1.02) contrast(1.01);
+}
+
+@keyframes pose-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
