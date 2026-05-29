@@ -2,10 +2,10 @@
   "manifest_version": 3,
   "name": "Dressing Room",
   "short_name": "Dressing Room",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Create AI try-ons on shopping pages and save your favorite looks.",
   "permissions": ["activeTab", "scripting", "storage", "tabs", "unlimitedStorage"],
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "host_permissions": ["https://dressingroom-gray.vercel.app/*"],
   "background": {
     "service_worker": "background.js"
   },
@@ -24,13 +24,5 @@
     },
     "default_title": "Dressing Room",
     "default_popup": "popup.html"
-  },
-  "content_scripts": [
-    {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
-      "css": ["content.css"],
-      "run_at": "document_idle"
-    }
-  ]
+  }
 }
