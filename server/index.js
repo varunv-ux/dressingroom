@@ -14,6 +14,71 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "28mb" }));
 
+app.get("/", (_req, res) => {
+  res.type("html").send(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dressing Room</title>
+    <style>
+      body { background: #f7f4ee; color: #171717; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; }
+      main { display: grid; gap: 18px; margin: 0 auto; max-width: 760px; min-height: 100vh; place-content: center; padding: 32px; }
+      h1 { font-size: clamp(40px, 7vw, 72px); letter-spacing: -0.03em; line-height: 0.95; margin: 0; }
+      p { color: #5b6472; font-size: 18px; line-height: 1.55; margin: 0; }
+      a { color: #b1124a; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Dressing Room</h1>
+      <p>Create AI try-ons on shopping pages and save your favorite looks. The Chrome extension uses your own OpenAI API key.</p>
+      <p><a href="/privacy">Privacy policy</a></p>
+    </main>
+  </body>
+</html>`);
+});
+
+app.get("/privacy", (_req, res) => {
+  res.type("html").send(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dressing Room Privacy Policy</title>
+    <style>
+      body { background: #f7f4ee; color: #171717; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; }
+      main { margin: 0 auto; max-width: 820px; padding: 56px 28px; }
+      h1 { font-size: 42px; letter-spacing: -0.02em; margin: 0 0 24px; }
+      h2 { font-size: 20px; margin: 32px 0 10px; }
+      p, li { color: #4b5565; font-size: 16px; line-height: 1.65; }
+      ul { padding-left: 22px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Privacy Policy</h1>
+      <p>Dressing Room processes images only when you request an AI try-on from the Chrome extension.</p>
+      <h2>Data handled</h2>
+      <ul>
+        <li>Reference photos selected by the user.</li>
+        <li>Product image URLs from shopping pages.</li>
+        <li>Generated try-on images.</li>
+        <li>OpenAI API key entered by the user.</li>
+      </ul>
+      <h2>Storage</h2>
+      <p>The user's OpenAI API key and Dressing room library are stored in Chrome extension local storage. Generated output images are uploaded to Vercel Blob so they can be displayed later.</p>
+      <h2>Hosted API</h2>
+      <p>The hosted API does not intentionally persist OpenAI API keys, incoming reference photos, or generated look metadata. Reference photos pass through the API only to complete the requested generation.</p>
+      <h2>Third-party services</h2>
+      <p>Dressing Room uses the OpenAI API to generate try-on images and Vercel/Vercel Blob to host the generation API and generated output images.</p>
+      <h2>User control</h2>
+      <p>Users can remove the extension to clear extension-local library data. Generated images stored in Vercel Blob may remain until deleted by the service operator.</p>
+    </main>
+  </body>
+</html>`);
+});
+
 app.get("/health", (_req, res) => {
   res.json({
     ok: true,
