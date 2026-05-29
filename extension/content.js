@@ -13,7 +13,7 @@ if (globalThis.__POSE_TRYON_CONTENT_LOADED__) {
 globalThis.__POSE_TRYON_CONTENT_LOADED__ = true;
 globalThis.__POSE_TRYON_CONTENT_VERSION__ = SCRIPT_VERSION;
 
-const DEFAULT_SERVER_URL = "https://pose-tryon.vercel.app";
+const DEFAULT_SERVER_URL = "https://dressingroom-gray.vercel.app";
 const LOOKS_STORAGE_KEY = "dressingRoomLooks";
 const MIN_IMAGE_AREA = 46000;
 const MIN_SIDE = 150;

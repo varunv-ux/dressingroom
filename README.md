@@ -29,7 +29,7 @@ After Vercel creates the project, set the extension backend URL in:
 Both files currently default to:
 
 ```js
-const DEFAULT_SERVER_URL = "https://pose-tryon.vercel.app";
+const DEFAULT_SERVER_URL = "https://dressingroom-gray.vercel.app";
 ```
 
 Use your actual Vercel production URL before packaging the extension.

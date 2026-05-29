@@ -1,4 +1,4 @@
-const DEFAULT_SERVER_URL = "https://pose-tryon.vercel.app";
+const DEFAULT_SERVER_URL = "https://dressingroom-gray.vercel.app";
 const MAX_SELECTED_PHOTOS = 1;
 
 const els = {
