@@ -1,8 +1,8 @@
-const DEFAULT_SERVER_URL = "http://localhost:8787";
+const DEFAULT_SERVER_URL = "https://pose-tryon.vercel.app";
 const MAX_SELECTED_PHOTOS = 1;
 
 const els = {
-  serverUrl: document.querySelector("#serverUrl"),
+  openaiApiKey: document.querySelector("#openaiApiKey"),
   referenceInput: document.querySelector("#referenceInput"),
   referenceGrid: document.querySelector("#referenceGrid"),
   referenceCount: document.querySelector("#referenceCount"),
@@ -23,14 +23,14 @@ init();
 
 async function init() {
   const saved = await chrome.storage.local.get([
-    "serverUrl",
+    "openaiApiKey",
     "referenceImages",
     "photoLibrary",
     "autoReplaceCached",
     "showTryOns",
     "showTags",
   ]);
-  els.serverUrl.value = saved.serverUrl || DEFAULT_SERVER_URL;
+  els.openaiApiKey.value = saved.openaiApiKey || "";
   els.showTryOns.checked = (saved.showTryOns ?? saved.autoReplaceCached) !== false;
   els.showTags.checked = saved.showTags !== false;
   photoLibrary = normalizePhotoSelection(migratePhotoLibrary(saved.photoLibrary, saved.referenceImages));
@@ -39,7 +39,7 @@ async function init() {
   await saveSettings();
   await checkServer();
 
-  els.serverUrl.addEventListener("change", async () => {
+  els.openaiApiKey.addEventListener("change", async () => {
     await saveSettings();
     await notifySettings();
   });
@@ -239,7 +239,7 @@ async function notifySettings() {
     await sendMessageToTab(tab, {
       type: "POSE_SETTINGS_UPDATED",
       settings: {
-        serverUrl: els.serverUrl.value.trim() || DEFAULT_SERVER_URL,
+        serverUrl: DEFAULT_SERVER_URL,
         showTryOns: els.showTryOns.checked,
         autoReplaceCached: els.showTryOns.checked,
         showTags: els.showTags.checked,
@@ -257,7 +257,7 @@ async function updateTryOnView() {
     const result = await sendMessageToTab(tab, {
       type: "POSE_SETTINGS_UPDATED",
       settings: {
-        serverUrl: els.serverUrl.value.trim() || DEFAULT_SERVER_URL,
+        serverUrl: DEFAULT_SERVER_URL,
         showTryOns: els.showTryOns.checked,
         autoReplaceCached: els.showTryOns.checked,
         showTags: els.showTags.checked,
@@ -318,7 +318,8 @@ function isMissingReceiverError(error) {
 
 async function saveSettings() {
   await chrome.storage.local.set({
-    serverUrl: els.serverUrl.value.trim() || DEFAULT_SERVER_URL,
+    serverUrl: DEFAULT_SERVER_URL,
+    openaiApiKey: els.openaiApiKey.value.trim(),
     showTryOns: els.showTryOns.checked,
     autoReplaceCached: els.showTryOns.checked,
     showTags: els.showTags.checked,
@@ -327,7 +328,7 @@ async function saveSettings() {
 
 async function checkServer() {
   try {
-    const response = await fetch(new URL("/health", els.serverUrl.value));
+    const response = await fetch(new URL("/health", DEFAULT_SERVER_URL));
     const data = await response.json();
     if (!response.ok || !data.ok) {
       throw new Error("Server unavailable");

@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "node server/index.js",
-    "check": "node --check server/index.js && node --check extension/background.js && node --check extension/content.js && node --check extension/popup.js && node --check extension/dressing-room.js"
+    "check": "node --check server/index.js && node --check api/index.js && node --check extension/background.js && node --check extension/content.js && node --check extension/popup.js && node --check extension/dressing-room.js"
   },
   "dependencies": {
+    "@vercel/blob": "^2.4.0",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
-    "muuri": "^0.9.5"
+    "muuri": "^0.9.5",
+    "sharp": "^0.34.5"
   }
 }

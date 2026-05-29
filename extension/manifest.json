@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "AI try-on layer for ecommerce product photos.",
   "permissions": ["activeTab", "scripting", "storage", "tabs", "unlimitedStorage"],
-  "host_permissions": ["http://localhost:8787/*", "http://127.0.0.1:8787/*", "http://*/*", "https://*/*"],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
     "service_worker": "background.js"
   },

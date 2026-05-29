@@ -12,9 +12,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 async function handleServerRequest(message) {
   const url = normalizeServerUrl(message.url);
   const options = message.options || {};
+  const headers = { ...(options.headers || {}) };
+  const openaiApiKey = await getOpenAIKeyForRequest(url);
+
+  if (openaiApiKey) {
+    headers["X-Pose-OpenAI-Key"] = openaiApiKey;
+  }
+
   const response = await fetch(url.href, {
     method: options.method || "GET",
-    headers: options.headers || {},
+    headers,
     body: options.body,
   });
 
@@ -32,13 +39,21 @@ async function handleServerRequest(message) {
 
 function normalizeServerUrl(value) {
   const url = new URL(String(value || ""));
-  const localHosts = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
-  if (url.protocol !== "http:" || !localHosts.has(url.hostname) || url.port !== "8787") {
-    throw new Error("Only the local Pose server can be reached from the extension.");
+  if (url.protocol !== "https:") {
+    throw new Error("The generation server must be hosted over HTTPS.");
   }
 
   return url;
+}
+
+async function getOpenAIKeyForRequest(url) {
+  if (url.pathname !== "/api/try-on") {
+    return "";
+  }
+
+  const saved = await chrome.storage.local.get("openaiApiKey");
+  return String(saved.openaiApiKey || "").trim();
 }
 
 function parseJson(text) {

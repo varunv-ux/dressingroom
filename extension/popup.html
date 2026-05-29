@@ -33,6 +33,11 @@
       </section>
 
       <section class="panel settings-panel">
+        <label class="field">
+          <span>OpenAI API key</span>
+          <input id="openaiApiKey" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false" />
+          <small>Stored in this browser and sent only to the generation server when you make a try-on.</small>
+        </label>
         <label class="toggle">
           <span>
             <strong>Show my try-ons</strong>
@@ -53,14 +58,6 @@
         <button id="scanBtn" type="button">Find photos</button>
         <button id="roomBtn" type="button" class="secondary">Saved looks</button>
       </div>
-
-      <details class="advanced">
-        <summary>Menu</summary>
-        <label class="field">
-          <span>Local server</span>
-          <input id="serverUrl" type="url" value="http://localhost:8787" />
-        </label>
-      </details>
 
       <p id="message" class="message"></p>
     </main>

@@ -13,7 +13,8 @@ if (globalThis.__POSE_TRYON_CONTENT_LOADED__) {
 globalThis.__POSE_TRYON_CONTENT_LOADED__ = true;
 globalThis.__POSE_TRYON_CONTENT_VERSION__ = SCRIPT_VERSION;
 
-const DEFAULT_SERVER_URL = "http://localhost:8787";
+const DEFAULT_SERVER_URL = "https://pose-tryon.vercel.app";
+const LOOKS_STORAGE_KEY = "dressingRoomLooks";
 const MIN_IMAGE_AREA = 46000;
 const MIN_SIDE = 150;
 const MAX_VISIBLE_BATCH = 12;
@@ -32,15 +33,17 @@ let settings = {
 init();
 
 async function init() {
-  const savedSettings = await chrome.storage.local.get(["serverUrl", "autoReplaceCached", "showTryOns", "showTags"]);
+  const savedSettings = await chrome.storage.local.get([
+    "autoReplaceCached",
+    "showTryOns",
+    "showTags",
+  ]);
   settings = {
     ...settings,
     ...savedSettings,
+    serverUrl: DEFAULT_SERVER_URL,
     showTryOns: savedSettings.showTryOns ?? savedSettings.autoReplaceCached ?? settings.showTryOns,
   };
-  if (!settings.serverUrl) {
-    settings.serverUrl = DEFAULT_SERVER_URL;
-  }
 
   scanPage();
   window.addEventListener(
@@ -213,11 +216,9 @@ async function applyCachedLooks(candidates, { force }) {
     }
 
     try {
-      const url = new URL("/api/looks/by-source", settings.serverUrl);
-      url.searchParams.set("sourceUrl", state.sourceUrl);
-      const result = await requestServerJson(url);
-      if (result.look?.generatedUrl) {
-        replaceImageGroup(img, result.look.generatedUrl).forEach((groupImg) => {
+      const look = await findStoredLookBySource(state.sourceUrl);
+      if (look?.generatedUrl) {
+        replaceImageGroup(img, look.generatedUrl).forEach((groupImg) => {
           setImageState(groupImg, "ready", "Mine");
         });
         applied += 1;
@@ -261,6 +262,7 @@ async function generateForImage(img, referenceImages) {
 
     settings.showTryOns = true;
     await chrome.storage.local.set({ showTryOns: true, autoReplaceCached: true });
+    await storeGeneratedLook(result.look);
     replaceImageGroup(img, result.look.generatedUrl).forEach((groupImg) => {
       setImageState(groupImg, "ready", "Mine");
     });
@@ -270,6 +272,38 @@ async function generateForImage(img, referenceImages) {
     const failure = getTryOnFailure(error);
     setImageState(img, "error", failure.label, failure.detail);
     return { ok: false, error: error.message };
+  }
+}
+
+async function getStoredLooks() {
+  const saved = await chrome.storage.local.get(LOOKS_STORAGE_KEY);
+  return Array.isArray(saved[LOOKS_STORAGE_KEY]) ? saved[LOOKS_STORAGE_KEY] : [];
+}
+
+async function storeGeneratedLook(look) {
+  if (!look?.id || !look.generatedUrl) {
+    return;
+  }
+
+  const looks = await getStoredLooks();
+  const nextLooks = [look, ...looks.filter((item) => item.id !== look.id && item.cacheKey !== look.cacheKey)];
+  await chrome.storage.local.set({ [LOOKS_STORAGE_KEY]: nextLooks });
+}
+
+async function findStoredLookBySource(sourceUrl) {
+  const sourceKey = normalizeSourceUrl(sourceUrl);
+  const looks = await getStoredLooks();
+  return looks.find((look) => look.sourceKey === sourceKey || normalizeSourceUrl(look.sourceUrl || "") === sourceKey) || null;
+}
+
+function normalizeSourceUrl(value) {
+  try {
+    const url = new URL(value);
+    url.hash = "";
+    url.search = "";
+    return url.href;
+  } catch {
+    return value;
   }
 }
 

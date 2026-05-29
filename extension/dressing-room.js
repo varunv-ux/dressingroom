@@ -1,4 +1,4 @@
-const DEFAULT_SERVER_URL = "http://localhost:8787";
+const LOOKS_STORAGE_KEY = "dressingRoomLooks";
 const ORDER_STORAGE_KEY = "dressingRoomLookOrder";
 const SIDE_RAIL_STORAGE_KEY = "dressingRoomSideRail";
 const HIDDEN_LOOKS_STORAGE_KEY = "dressingRoomHiddenLooks";
@@ -36,7 +36,6 @@ const els = {
 };
 
 let state = {
-  serverUrl: DEFAULT_SERVER_URL,
   looks: [],
   order: [],
   sideRailIds: [],
@@ -54,13 +53,13 @@ init();
 
 async function init() {
   const saved = await chrome.storage.local.get([
-    "serverUrl",
+    LOOKS_STORAGE_KEY,
     ORDER_STORAGE_KEY,
     SIDE_RAIL_STORAGE_KEY,
     HIDDEN_LOOKS_STORAGE_KEY,
   ]);
-  state.serverUrl = saved.serverUrl || DEFAULT_SERVER_URL;
   state.order = Array.isArray(saved[ORDER_STORAGE_KEY]) ? saved[ORDER_STORAGE_KEY] : [];
+  state.looks = applyStoredOrder(Array.isArray(saved[LOOKS_STORAGE_KEY]) ? saved[LOOKS_STORAGE_KEY] : []);
   state.sideRailIds = Array.isArray(saved[SIDE_RAIL_STORAGE_KEY]) ? saved[SIDE_RAIL_STORAGE_KEY] : [];
   state.hiddenIds = Array.isArray(saved[HIDDEN_LOOKS_STORAGE_KEY]) ? saved[HIDDEN_LOOKS_STORAGE_KEY] : [];
   els.railToggle.addEventListener("click", () => {
@@ -75,23 +74,7 @@ async function init() {
     railGrid?.refreshItems().layout();
   }, 120));
 
-  await loadLooks();
-}
-
-async function loadLooks() {
-  try {
-    const response = await fetch(new URL("/api/looks", state.serverUrl));
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.error || response.statusText);
-    }
-
-    state.looks = applyStoredOrder(result.looks || []);
-    render();
-  } catch (error) {
-    state.looks = [];
-    render(error.message);
-  }
+  render();
 }
 
 function render(error = "") {
