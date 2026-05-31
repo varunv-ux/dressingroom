@@ -217,6 +217,47 @@ main {
   z-index: 0;
 }
 
+.pending-card {
+  cursor: default;
+}
+
+.pending-skeleton {
+  aspect-ratio: 4 / 5;
+  background: linear-gradient(110deg, #ece9e4 8%, #f6f3ee 24%, #ece9e4 40%);
+  background-size: 200% 100%;
+  border-radius: 13px 13px 0 0;
+  width: 100%;
+  animation: pose-skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+.pending-status {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.pending-status::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #6b7280;
+  margin-right: 6px;
+  vertical-align: middle;
+  animation: pose-dot-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pose-skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes pose-dot-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
 .look-meta {
   align-items: center;
   display: flex;

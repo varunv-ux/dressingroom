@@ -6,6 +6,35 @@
   "description": "Create AI try-ons on shopping pages and save your favorite looks.",
   "permissions": ["activeTab", "scripting", "storage", "tabs", "unlimitedStorage"],
   "host_permissions": ["https://dressingroom-gray.vercel.app/*"],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.zara.com/*",
+        "*://*.mango.com/*",
+        "*://*.suitsupply.com/*",
+        "*://*.anthropologie.com/*",
+        "*://*.hm.com/*",
+        "*://*.uniqlo.com/*",
+        "*://*.nordstrom.com/*",
+        "*://*.jcrew.com/*",
+        "*://*.asos.com/*",
+        "*://*.everlane.com/*",
+        "*://*.ssense.com/*",
+        "*://*.farfetch.com/*",
+        "*://*.net-a-porter.com/*",
+        "*://*.mrporter.com/*",
+        "*://*.cos.com/*",
+        "*://*.arket.com/*",
+        "*://*.aritzia.com/*",
+        "*://*.urbanoutfitters.com/*",
+        "*://*.gap.com/*",
+        "*://*.bananarepublic.com/*"
+      ],
+      "css": ["content.css"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
   "background": {
     "service_worker": "background.js"
   },

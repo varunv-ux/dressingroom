@@ -2,6 +2,7 @@ const LOOKS_STORAGE_KEY = "dressingRoomLooks";
 const ORDER_STORAGE_KEY = "dressingRoomLookOrder";
 const HIDDEN_LOOKS_STORAGE_KEY = "dressingRoomHiddenLooks";
 const STACKS_STORAGE_KEY = "dressingRoomStacks";
+const PENDING_STORAGE_KEY = "dressingRoomPending";
 const BRAND_LABELS = {
   "zara.com": "Zara",
   "www.zara.com": "Zara",
@@ -44,6 +45,7 @@ let state = {
   order: [],
   hiddenIds: [],
   stacks: [],
+  pending: [],
   filter: "all",
   activeStackId: "",
 };
@@ -69,11 +71,13 @@ async function init() {
     ORDER_STORAGE_KEY,
     HIDDEN_LOOKS_STORAGE_KEY,
     STACKS_STORAGE_KEY,
+    PENDING_STORAGE_KEY,
   ]);
   state.order = Array.isArray(saved[ORDER_STORAGE_KEY]) ? saved[ORDER_STORAGE_KEY].map(normalizeOrderKey) : [];
   state.looks = applyStoredOrder(Array.isArray(saved[LOOKS_STORAGE_KEY]) ? saved[LOOKS_STORAGE_KEY] : []);
   state.hiddenIds = Array.isArray(saved[HIDDEN_LOOKS_STORAGE_KEY]) ? saved[HIDDEN_LOOKS_STORAGE_KEY] : [];
   state.stacks = Array.isArray(saved[STACKS_STORAGE_KEY]) ? normalizeStacks(saved[STACKS_STORAGE_KEY]) : [];
+  state.pending = Array.isArray(saved[PENDING_STORAGE_KEY]) ? saved[PENDING_STORAGE_KEY] : [];
   els.createStackButton.addEventListener("click", createStackFromSelection);
   els.closeStackButton.innerHTML = ICONS.close;
   els.closeStackButton.addEventListener("click", closeStackLayer);
@@ -92,6 +96,37 @@ async function init() {
 
   render();
   initSelectionArea();
+  chrome.storage.onChanged.addListener(handleStorageChange);
+}
+
+function handleStorageChange(changes, areaName) {
+  if (areaName !== "local") {
+    return;
+  }
+  let touched = false;
+  if (changes[LOOKS_STORAGE_KEY]) {
+    state.looks = applyStoredOrder(Array.isArray(changes[LOOKS_STORAGE_KEY].newValue) ? changes[LOOKS_STORAGE_KEY].newValue : []);
+    touched = true;
+  }
+  if (changes[STACKS_STORAGE_KEY]) {
+    state.stacks = Array.isArray(changes[STACKS_STORAGE_KEY].newValue) ? normalizeStacks(changes[STACKS_STORAGE_KEY].newValue) : [];
+    touched = true;
+  }
+  if (changes[HIDDEN_LOOKS_STORAGE_KEY]) {
+    state.hiddenIds = Array.isArray(changes[HIDDEN_LOOKS_STORAGE_KEY].newValue) ? changes[HIDDEN_LOOKS_STORAGE_KEY].newValue : [];
+    touched = true;
+  }
+  if (changes[ORDER_STORAGE_KEY]) {
+    state.order = Array.isArray(changes[ORDER_STORAGE_KEY].newValue) ? changes[ORDER_STORAGE_KEY].newValue.map(normalizeOrderKey) : [];
+    touched = true;
+  }
+  if (changes[PENDING_STORAGE_KEY]) {
+    state.pending = Array.isArray(changes[PENDING_STORAGE_KEY].newValue) ? changes[PENDING_STORAGE_KEY].newValue : [];
+    touched = true;
+  }
+  if (touched) {
+    render();
+  }
 }
 
 function render(error = "") {
@@ -156,7 +191,37 @@ function renderGrid(error) {
     return;
   }
 
-  els.grid.replaceChildren(...entries.map((entry) => (entry.type === "stack" ? renderStack(entry.value) : renderLook(entry.value))));
+  els.grid.replaceChildren(...entries.map((entry) => {
+    if (entry.type === "stack") return renderStack(entry.value);
+    if (entry.type === "pending") return renderPending(entry.value);
+    return renderLook(entry.value);
+  }));
+}
+
+function renderPending(entry) {
+  const item = document.createElement("div");
+  item.className = "look-item pending-item";
+  item.dataset.pendingId = entry.id;
+
+  const card = document.createElement("article");
+  card.className = "look-card pending-card";
+
+  const skeleton = document.createElement("div");
+  skeleton.className = "pending-skeleton";
+
+  const meta = document.createElement("div");
+  meta.className = "look-meta";
+  const label = document.createElement("span");
+  label.className = "domain";
+  label.textContent = getBrandForPending(entry);
+  const status = document.createElement("span");
+  status.className = "pending-status";
+  status.textContent = "Generating";
+  meta.append(label, status);
+
+  card.append(skeleton, meta);
+  item.append(card);
+  return item;
 }
 
 function renderLook(look, options = {}) {
@@ -312,10 +377,30 @@ function getVisibleGridEntries() {
     type: "stack",
     value: stack,
   }));
+  const pendingEntries = getVisiblePending().map((entry) => ({
+    key: `pending:${entry.id}`,
+    type: "pending",
+    value: entry,
+  }));
   const byKey = new Map([...lookEntries, ...stackEntries].map((entry) => [entry.key, entry]));
   const orderedEntries = state.order.map((key) => byKey.get(key)).filter(Boolean);
   const orderedKeys = new Set(orderedEntries.map((entry) => entry.key));
-  return [...orderedEntries, ...[...stackEntries, ...lookEntries].filter((entry) => !orderedKeys.has(entry.key))];
+  const unorderedEntries = [...stackEntries, ...lookEntries].filter((entry) => !orderedKeys.has(entry.key));
+  return [...pendingEntries, ...unorderedEntries, ...orderedEntries];
+}
+
+function getVisiblePending() {
+  if (!Array.isArray(state.pending) || !state.pending.length) {
+    return [];
+  }
+  if (state.filter === "all") {
+    return state.pending;
+  }
+  return state.pending.filter((entry) => getBrandForPending(entry) === state.filter);
+}
+
+function getBrandForPending(entry) {
+  return getBrandName({ domain: entry.domain, pageUrl: entry.pageUrl, sourceUrl: entry.sourceUrl });
 }
 
 function getActiveLooks() {

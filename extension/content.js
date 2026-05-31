@@ -15,6 +15,7 @@ globalThis.__POSE_TRYON_CONTENT_VERSION__ = SCRIPT_VERSION;
 
 const DEFAULT_SERVER_URL = "https://dressingroom-gray.vercel.app";
 const LOOKS_STORAGE_KEY = "dressingRoomLooks";
+const PENDING_STORAGE_KEY = "dressingRoomPending";
 const MIN_IMAGE_AREA = 46000;
 const MIN_SIDE = 150;
 const MAX_VISIBLE_BATCH = 12;
@@ -265,6 +266,17 @@ async function generateForImage(img, referenceImages) {
   }
 
   setImageState(img, "working", "Working");
+  const pendingId = `pending-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const pendingEntry = {
+    id: pendingId,
+    sourceUrl: state.sourceUrl,
+    pageUrl: window.location.href,
+    domain: window.location.hostname.replace(/^www\./, ""),
+    title: document.title,
+    alt: img.alt || "",
+    startedAt: Date.now(),
+  };
+  await addPendingLook(pendingEntry);
 
   try {
     const result = await requestServerJson("/api/try-on", {
@@ -283,15 +295,37 @@ async function generateForImage(img, referenceImages) {
     settings.showTryOns = true;
     await chrome.storage.local.set({ showTryOns: true, autoReplaceCached: true });
     await storeGeneratedLook(result.look);
+    await removePendingLook(pendingId);
     replaceImageGroup(img, result.look.generatedUrl).forEach((groupImg) => {
       setImageState(groupImg, "ready", "Mine");
     });
     return { ok: true, look: result.look };
   } catch (error) {
     console.warn("[Pose] try-on failed", error);
+    await removePendingLook(pendingId);
     const failure = getTryOnFailure(error);
     setImageState(img, "error", failure.label, failure.detail);
     return { ok: false, error: error.message };
+  }
+}
+
+async function addPendingLook(entry) {
+  try {
+    const saved = await chrome.storage.local.get(PENDING_STORAGE_KEY);
+    const list = Array.isArray(saved[PENDING_STORAGE_KEY]) ? saved[PENDING_STORAGE_KEY] : [];
+    await chrome.storage.local.set({ [PENDING_STORAGE_KEY]: [entry, ...list] });
+  } catch {
+    // ignore
+  }
+}
+
+async function removePendingLook(id) {
+  try {
+    const saved = await chrome.storage.local.get(PENDING_STORAGE_KEY);
+    const list = Array.isArray(saved[PENDING_STORAGE_KEY]) ? saved[PENDING_STORAGE_KEY] : [];
+    await chrome.storage.local.set({ [PENDING_STORAGE_KEY]: list.filter((item) => item.id !== id) });
+  } catch {
+    // ignore
   }
 }
 
