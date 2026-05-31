@@ -355,6 +355,7 @@ function normalizeSourceUrl(value) {
     const url = new URL(value);
     url.hash = "";
     url.search = "";
+    url.pathname = url.pathname.replace(/_(?:\d+|s|sm|m|md|l|lg|xl|xxl|small|medium|large)(?=\.[a-zA-Z]{3,4}$)/i, "");
     return url.href;
   } catch {
     return value;
@@ -569,6 +570,10 @@ function ensureOverlay(img) {
   button.addEventListener("click", async (event) => {
     event.preventDefault();
     event.stopPropagation();
+    const current = imageState.get(img)?.state;
+    if (current === "working" || current === "ready") {
+      return;
+    }
     await generateForImage(img, await getReferenceImages());
   });
 

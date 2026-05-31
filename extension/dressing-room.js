@@ -3,6 +3,8 @@ const ORDER_STORAGE_KEY = "dressingRoomLookOrder";
 const HIDDEN_LOOKS_STORAGE_KEY = "dressingRoomHiddenLooks";
 const STACKS_STORAGE_KEY = "dressingRoomStacks";
 const PENDING_STORAGE_KEY = "dressingRoomPending";
+const FILTER_STORAGE_KEY = "dressingRoomFilter";
+const ACTIVE_STACK_STORAGE_KEY = "dressingRoomActiveStack";
 const BRAND_LABELS = {
   "zara.com": "Zara",
   "www.zara.com": "Zara",
@@ -72,12 +74,16 @@ async function init() {
     HIDDEN_LOOKS_STORAGE_KEY,
     STACKS_STORAGE_KEY,
     PENDING_STORAGE_KEY,
+    FILTER_STORAGE_KEY,
+    ACTIVE_STACK_STORAGE_KEY,
   ]);
   state.order = Array.isArray(saved[ORDER_STORAGE_KEY]) ? saved[ORDER_STORAGE_KEY].map(normalizeOrderKey) : [];
   state.looks = applyStoredOrder(Array.isArray(saved[LOOKS_STORAGE_KEY]) ? saved[LOOKS_STORAGE_KEY] : []);
   state.hiddenIds = Array.isArray(saved[HIDDEN_LOOKS_STORAGE_KEY]) ? saved[HIDDEN_LOOKS_STORAGE_KEY] : [];
   state.stacks = Array.isArray(saved[STACKS_STORAGE_KEY]) ? normalizeStacks(saved[STACKS_STORAGE_KEY]) : [];
   state.pending = Array.isArray(saved[PENDING_STORAGE_KEY]) ? saved[PENDING_STORAGE_KEY] : [];
+  state.filter = typeof saved[FILTER_STORAGE_KEY] === "string" ? saved[FILTER_STORAGE_KEY] : "all";
+  const restoredStackId = typeof saved[ACTIVE_STACK_STORAGE_KEY] === "string" ? saved[ACTIVE_STACK_STORAGE_KEY] : "";
   els.createStackButton.addEventListener("click", createStackFromSelection);
   els.closeStackButton.innerHTML = ICONS.close;
   els.closeStackButton.addEventListener("click", closeStackLayer);
@@ -96,6 +102,9 @@ async function init() {
 
   render();
   initSelectionArea();
+  if (restoredStackId && state.stacks.some((stack) => stack.id === restoredStackId)) {
+    openStackLayer(restoredStackId);
+  }
   chrome.storage.onChanged.addListener(handleStorageChange);
 }
 
@@ -172,6 +181,7 @@ function renderFilters() {
       button.textContent = `${brand === "all" ? "All" : brand} ${count}`;
       button.addEventListener("click", () => {
         state.filter = brand;
+        chrome.storage.local.set({ [FILTER_STORAGE_KEY]: brand });
         render();
       });
       return button;
@@ -947,6 +957,7 @@ async function addLooksToStack(stackId, lookIds) {
 
 function openStackLayer(stackId) {
   state.activeStackId = stackId;
+  chrome.storage.local.set({ [ACTIVE_STACK_STORAGE_KEY]: stackId });
   renderStackLayer();
 }
 
@@ -956,6 +967,7 @@ function closeStackLayer() {
   }
 
   state.activeStackId = "";
+  chrome.storage.local.set({ [ACTIVE_STACK_STORAGE_KEY]: "" });
   delete els.stackLayer.dataset.stackId;
   delete els.unstackButton.dataset.stackId;
   els.stackLayer.hidden = true;
