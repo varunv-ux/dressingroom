@@ -66,6 +66,26 @@ async function init() {
     attributes: true,
     attributeFilter: ["src", "srcset", "style"],
   });
+
+  watchSpaNavigation();
+}
+
+function watchSpaNavigation() {
+  let lastUrl = location.href;
+  const onChange = () => {
+    if (location.href === lastUrl) return;
+    lastUrl = location.href;
+    scheduleScan();
+  };
+  window.addEventListener("popstate", onChange);
+  ["pushState", "replaceState"].forEach((method) => {
+    const original = history[method];
+    history[method] = function patched(...args) {
+      const result = original.apply(this, args);
+      setTimeout(onChange, 0);
+      return result;
+    };
+  });
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -548,9 +568,21 @@ function setImageState(img, state, label, detail = "") {
 
 let overlaySyncQueued = false;
 let scanTimer = 0;
+let scanMaxWaitTimer = 0;
 function scheduleScan() {
   clearTimeout(scanTimer);
-  scanTimer = setTimeout(scanPage, 180);
+  scanTimer = setTimeout(runScheduledScan, 180);
+  if (!scanMaxWaitTimer) {
+    scanMaxWaitTimer = setTimeout(runScheduledScan, 600);
+  }
+}
+
+function runScheduledScan() {
+  clearTimeout(scanTimer);
+  clearTimeout(scanMaxWaitTimer);
+  scanTimer = 0;
+  scanMaxWaitTimer = 0;
+  scanPage();
 }
 
 function scheduleOverlaySync() {

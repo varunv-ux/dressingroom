@@ -10,53 +10,83 @@
     <main class="popup-shell">
       <header class="app-header">
         <div class="brand-copy">
-          <h1>Dressing room</h1>
+          <h1 id="appTitle">Dressing room</h1>
         </div>
+        <button
+          id="settingsToggle"
+          type="button"
+          class="icon-button settings-toggle"
+          aria-label="Open settings"
+          aria-expanded="false"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.08A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.08A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6h.01A1.7 1.7 0 0 0 10 3.04V3a2 2 0 1 1 4 0v.08a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9v.01c.32.13.6.34.83.6" />
+          </svg>
+        </button>
+        <button
+          id="settingsBack"
+          type="button"
+          class="icon-button settings-back"
+          aria-label="Back"
+          hidden
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m15 6-6 6 6 6" />
+          </svg>
+        </button>
       </header>
 
-      <section class="panel">
-        <div class="section-head">
-          <div>
-            <h2>Your photos</h2>
-            <p>Choose the photo Pose should use.</p>
+      <div id="mainView">
+        <section class="panel">
+          <div class="section-head">
+            <div>
+              <h2>Your photos</h2>
+              <p>Pick one to try on.</p>
+            </div>
+            <span id="referenceCount">0</span>
           </div>
-          <span id="referenceCount">0</span>
+          <input id="referenceInput" class="visually-hidden" type="file" accept="image/*" multiple />
+          <div id="referenceGrid" class="reference-grid"></div>
+          <div class="upload-row">
+            <label class="upload-button" for="referenceInput">Add photos</label>
+          </div>
+        </section>
+
+        <section class="panel settings-panel">
+          <label class="toggle">
+            <span>
+              <strong>Show try-ons</strong>
+              <small>Replace store photos with your looks.</small>
+            </span>
+            <input id="showTryOns" type="checkbox" />
+          </label>
+          <label class="toggle">
+            <span>
+              <strong>Show buttons</strong>
+              <small>Add a Try on button to product photos.</small>
+            </span>
+            <input id="showTags" type="checkbox" />
+          </label>
+        </section>
+
+        <div class="action-grid">
+          <button id="roomBtn" type="button" class="primary">Dressing room</button>
+          <button id="scanBtn" type="button" class="secondary">Scan page</button>
         </div>
-        <input id="referenceInput" class="visually-hidden" type="file" accept="image/*" multiple />
-        <div id="referenceGrid" class="reference-grid"></div>
-        <div class="upload-row">
-          <label class="upload-button" for="referenceInput">Add photos</label>
-          <button id="clearRefsBtn" type="button" class="text-button">Clear all</button>
-        </div>
+      </div>
 
-        <button id="generateBtn" type="button" class="primary main-action">Try on visible photos</button>
-      </section>
-
-      <section class="panel settings-panel">
-        <label class="field">
-          <span>OpenAI API key</span>
-          <input id="openaiApiKey" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false" />
-          <small>Stored in this browser and sent only to the generation server when you make a try-on.</small>
-        </label>
-        <label class="toggle">
-          <span>
-            <strong>Show my try-ons</strong>
-            <small>Switch store photos to your saved looks.</small>
-          </span>
-          <input id="showTryOns" type="checkbox" />
-        </label>
-        <label class="toggle">
-          <span>
-            <strong>Show try-on buttons</strong>
-            <small>Show a Try on button over product photos.</small>
-          </span>
-          <input id="showTags" type="checkbox" />
-        </label>
-      </section>
-
-      <div class="action-grid">
-        <button id="scanBtn" type="button">Find photos</button>
-        <button id="roomBtn" type="button" class="secondary">Saved looks</button>
+      <div id="settingsView" hidden>
+        <section class="panel">
+          <label class="field">
+            <span class="field-label">
+              OpenAI API key
+              <span id="apiKeySaved" class="saved-pill" hidden>Saved</span>
+            </span>
+            <input id="openaiApiKey" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false" />
+            <small>Saved in this browser. Used only for try-ons.</small>
+          </label>
+        </section>
       </div>
 
       <p id="message" class="message"></p>

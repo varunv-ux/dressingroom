@@ -34,6 +34,21 @@
   background: #0f766e;
 }
 
+.pose-overlay-button[data-state="ready"]::before {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  color: #0f766e;
+  content: "✓";
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 700;
+  height: 14px;
+  justify-content: center;
+  line-height: 1;
+  width: 14px;
+}
+
 .pose-overlay-button[data-state="working"] {
   background: #141515;
   cursor: wait;

@@ -12,23 +12,30 @@
         <img class="brand-logo" src="icons/icon-32.png" alt="" />
         <strong>Dressing room</strong>
       </div>
-      <div class="right">
-        <button id="railToggle" class="rail-toggle" type="button" aria-label="Open side rail" aria-expanded="false"></button>
-      </div>
     </header>
 
     <nav id="filters"></nav>
 
     <main>
       <section id="grid" class="grid" aria-label="Looks"></section>
-      <aside class="side-rail" aria-label="Side rail">
-        <div class="rail-header">
-          <strong>Side rail</strong>
-          <span id="railCount">0</span>
-        </div>
-        <section id="railGrid" class="rail-grid"></section>
-      </aside>
     </main>
+
+    <div id="selectionAction" class="selection-action" hidden>
+      <span id="selectionCount"></span>
+      <button id="createStackButton" type="button">Create stack</button>
+    </div>
+
+    <section id="stackLayer" class="stack-layer" aria-label="Stack" hidden>
+      <div class="stack-layer-header">
+        <button id="closeStackButton" class="icon-button" type="button" aria-label="Close stack"></button>
+        <div>
+          <strong id="stackTitle">Stack</strong>
+          <span id="stackCount"></span>
+        </div>
+        <button id="unstackButton" type="button">Unstack</button>
+      </div>
+      <section id="stackGrid" class="stack-grid"></section>
+    </section>
 
     <template id="lookTemplate">
       <div class="look-item">
@@ -47,6 +54,7 @@
     </template>
 
     <script src="vendor/muuri.min.js"></script>
+    <script src="vendor/viselect.umd.js"></script>
     <script src="dressing-room.js"></script>
   </body>
 </html>

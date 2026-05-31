@@ -9,10 +9,17 @@ const port = Number(process.env.PORT || 8787);
 const imageModel = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2";
 const imageQuality = process.env.OPENAI_IMAGE_QUALITY || "medium";
 const mockMode = process.env.POSE_MOCK === "true";
+const RATE_LIMIT_WINDOW_MS = Number(process.env.POSE_RATE_LIMIT_WINDOW_MS || 60_000);
+const RATE_LIMIT_MAX = Number(process.env.POSE_RATE_LIMIT_MAX || 20);
+const MAX_REFERENCE_IMAGES = Number(process.env.POSE_MAX_REFERENCE_IMAGES || 4);
+const MAX_DATA_URL_BYTES = Number(process.env.POSE_MAX_DATA_URL_BYTES || 8_000_000);
+
+const rateBuckets = new Map();
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "28mb" }));
+app.use("/api/", rateLimit);
 
 app.get("/", (_req, res) => {
   res.type("html").send(`<!doctype html>
@@ -69,7 +76,7 @@ app.get("/privacy", (_req, res) => {
       <h2>Storage</h2>
       <p>The user's OpenAI API key and Dressing room library are stored in Chrome extension local storage. Generated output images are uploaded to Vercel Blob so they can be displayed later.</p>
       <h2>Hosted API</h2>
-      <p>The hosted API does not intentionally persist OpenAI API keys, incoming reference photos, or generated look metadata. Reference photos pass through the API only to complete the requested generation.</p>
+      <p>The hosted API does not persist OpenAI API keys, incoming reference photos, or generated look metadata. Reference photos pass through the API only to complete the requested generation and are discarded after the OpenAI response is returned. Requests are rate limited per IP to discourage abuse.</p>
       <h2>Third-party services</h2>
       <p>Dressing Room uses the OpenAI API to generate try-on images and Vercel/Vercel Blob to host the generation API and generated output images.</p>
       <h2>User control</h2>
@@ -187,6 +194,16 @@ function normalizeTryOnBody(body) {
     throw badRequest("At least one reference image data URL is required");
   }
 
+  if (referenceImages.length > MAX_REFERENCE_IMAGES) {
+    throw badRequest(`Too many reference images (max ${MAX_REFERENCE_IMAGES}).`);
+  }
+
+  referenceImages.forEach((dataUrl) => {
+    if (dataUrl.length > MAX_DATA_URL_BYTES) {
+      throw badRequest("A reference image is too large.");
+    }
+  });
+
   return {
     sourceUrl,
     pageUrl,
@@ -194,7 +211,7 @@ function normalizeTryOnBody(body) {
     title,
     alt,
     promptHints,
-    referenceImages: referenceImages.slice(0, 4),
+    referenceImages: referenceImages.slice(0, MAX_REFERENCE_IMAGES),
   };
 }
 
@@ -220,8 +237,31 @@ function buildTryOnPrompt(body) {
 }
 
 function getRequestOpenAIKey(req) {
-  const requestKey = String(req.get("x-pose-openai-key") || "").trim();
-  return requestKey || String(process.env.OPENAI_API_KEY || "").trim();
+  const auth = String(req.get("authorization") || "").trim();
+  if (/^bearer\s+/i.test(auth)) {
+    return auth.replace(/^bearer\s+/i, "").trim();
+  }
+  const legacy = String(req.get("x-pose-openai-key") || "").trim();
+  return legacy || String(process.env.OPENAI_API_KEY || "").trim();
+}
+
+function rateLimit(req, res, next) {
+  const ip = String(req.headers["x-forwarded-for"] || req.ip || "unknown").split(",")[0].trim();
+  const now = Date.now();
+  const bucket = rateBuckets.get(ip) || { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS };
+  if (now > bucket.resetAt) {
+    bucket.count = 0;
+    bucket.resetAt = now + RATE_LIMIT_WINDOW_MS;
+  }
+  bucket.count += 1;
+  rateBuckets.set(ip, bucket);
+  if (bucket.count > RATE_LIMIT_MAX) {
+    const retry = Math.ceil((bucket.resetAt - now) / 1000);
+    res.set("Retry-After", String(retry));
+    res.status(429).json({ error: `Too many requests. Try again in ${retry}s.` });
+    return;
+  }
+  next();
 }
 
 async function editTryOnImage({ sourceDataUrl, referenceImages, prompt, apiKey }) {

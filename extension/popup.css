@@ -14,7 +14,7 @@
 }
 
 body {
-  background: #e8e5e3;
+  background: #f1eeea;
   color: #171a1c;
   margin: 0;
   width: 352px;
@@ -26,6 +26,12 @@ body {
   padding: 14px;
 }
 
+#mainView,
+#settingsView {
+  display: grid;
+  gap: 10px;
+}
+
 .app-header,
 .section-head,
 .upload-row,
@@ -35,21 +41,58 @@ body {
   display: flex;
 }
 
-.app-header,
 .section-head,
 .upload-row {
   justify-content: space-between;
 }
 
 .app-header {
-  justify-content: center;
-  padding: 2px 0 4px;
+  display: grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items: center;
+  padding: 4px 4px 6px;
   text-align: center;
 }
 
 .brand-copy {
+  grid-column: 2;
   min-width: 0;
   width: 100%;
+}
+
+.icon-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: #2f3437;
+  cursor: pointer;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  padding: 0;
+  width: 36px;
+}
+
+.icon-button svg {
+  height: 18px;
+  overflow: visible;
+  width: 18px;
+}
+
+.icon-button:hover {
+  background: #f5f3f1;
+  transform: none;
+}
+
+.settings-toggle {
+  grid-column: 3;
+  justify-self: end;
+}
+
+.settings-back {
+  grid-column: 1;
+  justify-self: start;
 }
 
 h1,
@@ -111,6 +154,29 @@ h2 {
   color: #4b5565;
   font-size: 12px;
   font-weight: 600;
+}
+
+.field-label {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.saved-pill {
+  background: rgba(8, 122, 114, 0.12);
+  border-radius: 999px;
+  color: #087a72;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  padding: 3px 8px;
+  transition: opacity 180ms ease;
+}
+
+.saved-pill.is-visible {
+  opacity: 1;
 }
 
 input[type="password"],
@@ -175,7 +241,7 @@ button {
 }
 
 .upload-button {
-  background: #f8faf9;
+  background: #f1eeea;
   border-color: transparent;
   color: #2f3437;
   flex: 1;
@@ -189,11 +255,19 @@ button {
 .reference-grid {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(3, 76px);
-  grid-auto-rows: 76px;
-  max-height: 164px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-height: 320px;
   overflow-y: auto;
   padding: 2px;
+  transition: outline-color 140ms ease, background 140ms ease;
+  outline: 2px dashed transparent;
+  outline-offset: 2px;
+  border-radius: 14px;
+}
+
+.reference-grid.is-drop-target {
+  background: rgba(8, 122, 114, 0.06);
+  outline-color: rgba(8, 122, 114, 0.55);
 }
 
 .reference-grid.is-empty {
@@ -233,15 +307,24 @@ button {
   background: #edf2ef;
   border: 0;
   border-radius: 16px;
-  box-shadow: none;
-  display: grid;
-  height: 76px;
   min-width: 0;
+  overflow: visible;
+  padding: 0;
+  position: relative;
+  width: 100%;
+}
+
+.photo-select {
+  background: transparent;
+  border: 0;
+  border-radius: 16px;
+  cursor: pointer;
+  display: block;
+  height: 100%;
   overflow: hidden;
   padding: 0;
-  place-items: center;
   position: relative;
-  width: 76px;
+  width: 100%;
 }
 
 .photo-tile img {
@@ -250,28 +333,53 @@ button {
   width: 100%;
 }
 
-.photo-tile.selected {
-  box-shadow: none;
+.photo-tile.selected .photo-select::after {
+  border: 2px solid #141414;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 2px #ffffff;
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
 }
 
 .checkmark {
-  align-items: center;
-  background: #087a72;
-  border-radius: 999px;
-  color: #ffffff;
   display: none;
-  font-size: 10px;
-  font-weight: 700;
-  height: 19px;
-  justify-content: center;
-  position: absolute;
-  right: 5px;
-  top: 5px;
-  width: 19px;
 }
 
-.photo-tile.selected .checkmark {
+.photo-remove {
+  align-items: center;
+  background: rgba(20, 20, 20, 0.78);
+  border: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  cursor: pointer;
   display: flex;
+  font-size: 13px;
+  font-weight: 600;
+  height: 20px;
+  justify-content: center;
+  left: 4px;
+  line-height: 1;
+  opacity: 0;
+  padding: 0;
+  position: absolute;
+  top: 4px;
+  transition: opacity 120ms ease, background 120ms ease;
+  width: 20px;
+  z-index: 2;
+}
+
+.photo-tile:hover .photo-remove,
+.photo-remove:focus-visible {
+  opacity: 1;
+}
+
+.photo-tile .photo-remove:hover {
+  background: #141414;
+  border-color: transparent;
+  color: #ffffff;
+  transform: none;
 }
 
 .settings-panel {
@@ -342,30 +450,22 @@ button {
 }
 
 .action-grid {
-  gap: 10px;
+  display: grid;
+  gap: 8px;
 }
 
 .action-grid button {
-  flex: 1;
+  width: 100%;
 }
 
 button.primary {
   background: #161819;
   border-color: transparent;
   color: #ffffff;
-  flex: 1.5;
-}
-
-button.main-action {
-  font-size: 14px;
-  font-weight: 600;
-  height: 44px;
-  width: 100%;
 }
 
 button.secondary {
   background: #ffffff;
-  width: 100%;
 }
 
 button:not(.primary):hover,

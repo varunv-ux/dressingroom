@@ -3,21 +3,29 @@ const MAX_SELECTED_PHOTOS = 1;
 
 const els = {
   openaiApiKey: document.querySelector("#openaiApiKey"),
+  apiKeySaved: document.querySelector("#apiKeySaved"),
   referenceInput: document.querySelector("#referenceInput"),
   referenceGrid: document.querySelector("#referenceGrid"),
   referenceCount: document.querySelector("#referenceCount"),
   uploadRow: document.querySelector(".upload-row"),
   showTryOns: document.querySelector("#showTryOns"),
   showTags: document.querySelector("#showTags"),
-  clearRefsBtn: document.querySelector("#clearRefsBtn"),
   scanBtn: document.querySelector("#scanBtn"),
-  generateBtn: document.querySelector("#generateBtn"),
   roomBtn: document.querySelector("#roomBtn"),
   message: document.querySelector("#message"),
+  settingsToggle: document.querySelector("#settingsToggle"),
+  settingsBack: document.querySelector("#settingsBack"),
+  mainView: document.querySelector("#mainView"),
+  settingsView: document.querySelector("#settingsView"),
+  appTitle: document.querySelector("#appTitle"),
 };
 
 let photoLibrary = [];
 let busy = false;
+let activeTab = null;
+let messageTimer = 0;
+let apiKeySavedTimer = 0;
+let dragDepth = 0;
 
 init();
 
@@ -37,11 +45,17 @@ async function init() {
   await persistPhotoLibrary();
   renderReferences();
   await saveSettings();
+  await refreshActiveTab();
   await checkServer();
 
   els.openaiApiKey.addEventListener("change", async () => {
     await saveSettings();
+    flashApiKeySaved();
     await notifySettings();
+  });
+  els.openaiApiKey.addEventListener("blur", async () => {
+    await saveSettings();
+    flashApiKeySaved();
   });
 
   els.showTryOns.addEventListener("change", async () => {
@@ -54,17 +68,76 @@ async function init() {
     await notifySettings();
   });
 
-  els.referenceInput.addEventListener("change", handleReferenceFiles);
-  els.clearRefsBtn.addEventListener("click", clearReferenceFiles);
+  els.referenceInput.addEventListener("change", (event) => importPhotoFiles(event.target.files));
   els.scanBtn.addEventListener("click", () => sendTabCommand("POSE_SCAN", "Found", "photos"));
-  els.generateBtn.addEventListener("click", () => sendTabCommand("POSE_GENERATE_VISIBLE", "Made", "try-ons"));
   els.roomBtn.addEventListener("click", () => {
     chrome.tabs.create({ url: chrome.runtime.getURL("dressing-room.html") });
   });
+  els.settingsToggle.addEventListener("click", () => setSettingsOpen(true));
+  els.settingsBack.addEventListener("click", () => setSettingsOpen(false));
+
+  initDragAndDrop();
+}
+
+function initDragAndDrop() {
+  const dropZone = els.referenceGrid;
+  const onEnter = (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    dragDepth += 1;
+    dropZone.classList.add("is-drop-target");
+  };
+  const onOver = (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+  };
+  const onLeave = () => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) dropZone.classList.remove("is-drop-target");
+  };
+  const onDrop = (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    dragDepth = 0;
+    dropZone.classList.remove("is-drop-target");
+    importPhotoFiles(event.dataTransfer?.files);
+  };
+
+  ["dragenter"].forEach((evt) => dropZone.addEventListener(evt, onEnter));
+  ["dragover"].forEach((evt) => dropZone.addEventListener(evt, onOver));
+  ["dragleave"].forEach((evt) => dropZone.addEventListener(evt, onLeave));
+  ["drop"].forEach((evt) => dropZone.addEventListener(evt, onDrop));
+
+  window.addEventListener("dragover", (event) => {
+    if (hasFiles(event)) event.preventDefault();
+  });
+  window.addEventListener("drop", (event) => {
+    if (hasFiles(event)) event.preventDefault();
+  });
+}
+
+function hasFiles(event) {
+  return Array.from(event.dataTransfer?.types || []).includes("Files");
+}
+
+function setSettingsOpen(open) {
+  els.mainView.hidden = open;
+  els.settingsView.hidden = !open;
+  els.settingsToggle.hidden = open;
+  els.settingsBack.hidden = !open;
+  els.settingsToggle.setAttribute("aria-expanded", String(open));
+  els.appTitle.textContent = open ? "Settings" : "Dressing room";
+  setMessage("");
 }
 
 async function handleReferenceFiles(event) {
-  const files = Array.from(event.target.files || []);
+  await importPhotoFiles(event.target.files);
+  els.referenceInput.value = "";
+}
+
+async function importPhotoFiles(fileList) {
+  const files = Array.from(fileList || []).filter((file) => file.type.startsWith("image/"));
   if (!files.length) {
     return;
   }
@@ -82,10 +155,9 @@ async function handleReferenceFiles(event) {
     ...photoLibrary.map((photo) => ({ ...photo, selected: false })),
     ...nextPhotos,
   ]);
-  els.referenceInput.value = "";
   await persistPhotoLibrary();
   renderReferences();
-  setMessage(`${images.length} photo${images.length === 1 ? "" : "s"} added.`);
+  setMessage(`Added ${images.length}.`);
 }
 
 async function clearReferenceFiles() {
@@ -93,7 +165,24 @@ async function clearReferenceFiles() {
   photoLibrary = [];
   await persistPhotoLibrary();
   renderReferences();
-  setMessage("Photo library cleared.");
+  setMessage("Cleared.");
+}
+
+async function removePhoto(photoId) {
+  const removed = photoLibrary.find((photo) => photo.id === photoId);
+  if (!removed) {
+    return;
+  }
+
+  const wasSelected = removed.selected;
+  photoLibrary = photoLibrary.filter((photo) => photo.id !== photoId);
+  if (wasSelected && photoLibrary.length && !photoLibrary.some((photo) => photo.selected)) {
+    const newest = photoLibrary.slice().sort((a, b) => b.createdAt - a.createdAt)[0];
+    photoLibrary = photoLibrary.map((photo) => ({ ...photo, selected: photo.id === newest.id }));
+  }
+  await persistPhotoLibrary();
+  renderReferences();
+  setMessage("Removed.");
 }
 
 async function togglePhoto(photoId) {
@@ -108,7 +197,6 @@ async function togglePhoto(photoId) {
 function renderReferences() {
   const selectedCount = getSelectedPhotos().length;
   els.referenceCount.textContent = photoLibrary.length ? String(selectedCount) : "0";
-  els.clearRefsBtn.disabled = photoLibrary.length === 0;
   els.uploadRow.hidden = photoLibrary.length === 0;
   els.referenceGrid.classList.toggle("is-empty", photoLibrary.length === 0);
 
@@ -116,24 +204,34 @@ function renderReferences() {
     .slice()
     .sort((a, b) => b.createdAt - a.createdAt)
     .map((photo) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = `photo-tile${photo.selected ? " selected" : ""}`;
-      button.setAttribute("aria-pressed", String(Boolean(photo.selected)));
-      button.title = photo.selected ? "Selected for try-ons" : "Use this photo for try-ons";
-      button.addEventListener("click", () => togglePhoto(photo.id));
+      const tile = document.createElement("div");
+      tile.className = `photo-tile${photo.selected ? " selected" : ""}`;
+
+      const selectBtn = document.createElement("button");
+      selectBtn.type = "button";
+      selectBtn.className = "photo-select";
+      selectBtn.setAttribute("aria-pressed", String(Boolean(photo.selected)));
+      selectBtn.title = photo.selected ? "Selected" : "Use this photo";
+      selectBtn.addEventListener("click", () => togglePhoto(photo.id));
 
       const img = document.createElement("img");
       img.src = photo.src;
       img.alt = "Your reference";
-      button.append(img);
+      selectBtn.append(img);
 
-      const mark = document.createElement("span");
-      mark.className = "checkmark";
-      mark.textContent = "✓";
-      button.append(mark);
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "photo-remove";
+      removeBtn.setAttribute("aria-label", "Remove");
+      removeBtn.title = "Remove";
+      removeBtn.textContent = "×";
+      removeBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        removePhoto(photo.id);
+      });
 
-      return button;
+      tile.append(selectBtn, removeBtn);
+      return tile;
     });
 
   if (!photoTiles.length) {
@@ -142,10 +240,10 @@ function renderReferences() {
     emptyState.htmlFor = "referenceInput";
 
     const title = document.createElement("strong");
-    title.textContent = "Add your first photo";
+    title.textContent = "Add a photo";
 
     const copy = document.createElement("span");
-    copy.textContent = "Use a clear photo of yourself.";
+    copy.textContent = "A clear photo of you works best.";
 
     emptyState.append(title, copy);
     els.referenceGrid.replaceChildren(emptyState);
@@ -216,7 +314,7 @@ async function sendTabCommand(type, doneLabel, noun) {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const result = await sendMessageToTab(tab, { type });
     if (!result?.ok) {
-      throw new Error(result?.error || "The page is not ready for Pose.");
+      throw new Error(result?.error || "This page isn’t ready.");
     }
 
     const count = result.count ?? 0;
@@ -265,13 +363,13 @@ async function updateTryOnView() {
     });
 
     if (!result?.ok) {
-      throw new Error(result?.error || "Could not update this page.");
+      throw new Error(result?.error || "Couldn’t update this page.");
     }
 
     if (els.showTryOns.checked) {
-      setMessage(`Showing ${result.count ?? 0} saved try-on${(result.count ?? 0) === 1 ? "" : "s"}.`);
+      setMessage(`Showing ${result.count ?? 0} try-on${(result.count ?? 0) === 1 ? "" : "s"}.`);
     } else {
-      setMessage(`Restored ${result.count ?? 0} store photo${(result.count ?? 0) === 1 ? "" : "s"}.`);
+      setMessage(`Restored ${result.count ?? 0} photo${(result.count ?? 0) === 1 ? "" : "s"}.`);
     }
   } catch (error) {
     setMessage(error.message);
@@ -282,11 +380,11 @@ async function updateTryOnView() {
 
 async function sendMessageToTab(tab, message) {
   if (!tab?.id) {
-    throw new Error("No active browser tab found.");
+    throw new Error("No active tab.");
   }
 
   if (!/^https?:\/\//.test(tab.url || "")) {
-    throw new Error("Open a shopping page to find product photos.");
+    throw new Error("Open a shopping page first.");
   }
 
   try {
@@ -334,7 +432,7 @@ async function checkServer() {
       throw new Error("Server unavailable");
     }
   } catch {
-    setMessage("Pose server is offline.");
+    setMessage("Server offline.");
   }
 }
 
@@ -344,14 +442,47 @@ function setBusy(isBusy) {
 }
 
 function updateActionStates() {
-  const hasReferencePhoto = getSelectedPhotos().length > 0;
-  els.scanBtn.disabled = busy;
-  els.generateBtn.disabled = busy || !hasReferencePhoto;
+  const tabReady = isTabReady(activeTab);
+  els.scanBtn.disabled = busy || !tabReady;
+  els.scanBtn.title = tabReady ? "" : "Open a shopping page first.";
   els.roomBtn.disabled = busy;
+}
+
+async function refreshActiveTab() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    activeTab = tab || null;
+  } catch {
+    activeTab = null;
+  }
+  updateActionStates();
+}
+
+function isTabReady(tab) {
+  return /^https?:\/\//.test(tab?.url || "");
+}
+
+function flashApiKeySaved() {
+  if (!els.apiKeySaved) return;
+  els.apiKeySaved.hidden = false;
+  els.apiKeySaved.classList.add("is-visible");
+  window.clearTimeout(apiKeySavedTimer);
+  apiKeySavedTimer = window.setTimeout(() => {
+    els.apiKeySaved.classList.remove("is-visible");
+    apiKeySavedTimer = window.setTimeout(() => {
+      els.apiKeySaved.hidden = true;
+    }, 200);
+  }, 1400);
 }
 
 function setMessage(message) {
   els.message.textContent = message;
+  window.clearTimeout(messageTimer);
+  if (message) {
+    messageTimer = window.setTimeout(() => {
+      els.message.textContent = "";
+    }, 3200);
+  }
 }
 
 function fileToDataUrl(file) {
@@ -373,7 +504,7 @@ function fileToDataUrl(file) {
     };
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      reject(new Error("Could not read that image. Try a JPEG or PNG photo."));
+      reject(new Error("Couldn’t read that image. Try a JPEG or PNG."));
     };
     img.src = objectUrl;
   });
